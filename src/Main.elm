@@ -2,10 +2,10 @@ module Main exposing (..)
 
 import Browser
 import Element exposing (..)
-import Element.Border as Border
 import Element.Background as Background
-import Html exposing (Html, div, h1, img)
-import Html.Attributes exposing (src)
+import Element.Border as Border
+import Html exposing (Html, div, h1, img, table, tbody, td, text, th, thead, tr)
+import Html.Attributes exposing (src, style)
 
 
 
@@ -43,9 +43,13 @@ view model =
     { title = "OData client"
     , body =
         [ layout [] <|
-            column [ width fill, spacingXY 0 20 ]
+            column [ width fill, spacingXY 0 0 ]
                 [ navBar
-                , el [ centerX ] <| text "OData client"
+                , row [ height (px 600), width fill ]
+                    [ leftPane
+                    , el [ centerX ] <| dataTable
+                    , rightPane
+                    ]
                 ]
         ]
     }
@@ -55,8 +59,11 @@ borderColour : Color
 borderColour =
     rgb255 80 80 80
 
+
 bggray : Color
-bggray = rgb255 230 230 230
+bggray =
+    rgb255 230 230 230
+
 
 navBar : Element Msg
 navBar =
@@ -67,9 +74,54 @@ navBar =
         , Border.color borderColour
         , Background.color bggray
         ]
-        [ el [ alignLeft ] <| text "VisExp"
-        , el [ alignRight ] <| text "Menu"
+        [ el [ centerX ] <| Element.text "OData client"
         ]
+
+
+leftPane : Element Msg
+leftPane =
+    column
+        [ height fill
+        , paddingXY 30 4
+        , Border.widthEach { bottom = 0, top = 0, left = 0, right = 2 }
+        , Background.color bggray
+        ]
+        [ el [] <| Element.text "Left pane placeholder!"
+        ]
+
+
+rightPane : Element Msg
+rightPane =
+    column
+        [ height fill
+        , paddingXY 30 4
+        , Border.widthEach { bottom = 0, top = 0, left = 2, right = 0 }
+        , Background.color bggray
+        ]
+        [ el [] <| Element.text "Right pane placeholder!"
+        ]
+
+
+dataTable : Element Msg
+dataTable =
+    html <|
+        Html.table
+            [ style "border" "1px solid black"
+              , style "border-collapse" "collapse"
+            ]
+            [ thead [ style "background-color" "darkgrey" ]
+                [ tr []
+                    [ th [ style "border" "1px solid black" ] [ Html.text "Column heading!" ]
+                    , th [ style "border" "1px solid black" ] [ Html.text "Column heading 2" ]
+                    ]
+                ]
+            , tbody []
+                [ tr []
+                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell 1" ]
+                    , td [ style "border" "1px solid black" ] [ Html.text "Cell 2" ]
+                    ]
+                ]
+            ]
 
 
 
