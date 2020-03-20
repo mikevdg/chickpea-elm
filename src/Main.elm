@@ -1,6 +1,7 @@
 module Main exposing (..)
 
 import Browser
+import Debug exposing (todo)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -43,9 +44,9 @@ view model =
     { title = "OData client"
     , body =
         [ layout [] <|
-            column [ width fill, spacingXY 0 0 ]
+            column [ width fill, height fill, spacingXY 0 0 ]
                 [ navBar
-                , row [ height (px 600), width fill ]
+                , row [ height fill, width fill ]
                     [ leftPane
                     , el [ centerX ] <| dataTable
                     , rightPane
@@ -63,6 +64,7 @@ borderColour =
 bggray : Color
 bggray =
     rgb255 230 230 230
+
 
 
 navBar : Element Msg
@@ -102,27 +104,92 @@ rightPane =
         ]
 
 
+
+{- I need to use HTML here because I need to do more than elm-ui's datatable allows. -}
+
+
+packed : List (Attribute msg)
+packed =
+    [ spacing 0, padding 0, Element.explain Debug.todo ]
+
+
 dataTable : Element Msg
 dataTable =
+    column
+        packed
+        [ dataTableFilter
+        , row packed
+            [ dataTableContents
+            , dataTableScrollbar
+            ]
+        ]
+
+
+dataTableFilter : Element Msg
+dataTableFilter =
+    el [ width fill, height (px 20), Background.color bggray ] (Element.text "filter")
+
+
+dataTableContents : Element Msg
+dataTableContents =
     html <|
         Html.table
-            [ style "border" "1px solid black"
-              , style "border-collapse" "collapse"
+            [ style "border" "1px solid grey"
+            , style "border-collapse" "collapse"
             ]
             [ thead [ style "background-color" "darkgrey" ]
                 [ tr []
-                    [ th [ style "border" "1px solid black" ] [ Html.text "Column heading!" ]
-                    , th [ style "border" "1px solid black" ] [ Html.text "Column heading 2" ]
+                    [ th [ style "border" "1px solid black" ] [ Html.text "Column A" ]
+                    , th [ style "border" "1px solid black" ] [ Html.text "Column B" ]
                     ]
                 ]
             , tbody []
                 [ tr []
-                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell 1" ]
-                    , td [ style "border" "1px solid black" ] [ Html.text "Cell 2" ]
+                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A1" ]
+                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B1" ]
+                    ]
+                , tr []
+                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
+                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
+                    ]
+                , tr []
+                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
+                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
+                    ]
+                , tr []
+                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
+                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
+                    ]
+                , tr []
+                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
+                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
+                    ]
+                , tr []
+                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
+                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
+                    ]
+                , tr []
+                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
+                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
+                    ]
+                , tr []
+                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
+                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
                     ]
                 ]
             ]
 
+scrollbarColour : Color
+scrollbarColour =
+    rgb255 80 80 80
+
+dataTableScrollbar : Element Msg
+dataTableScrollbar =
+    column [height fill, width (px 20)] 
+    [
+        el [ height (px 50) ] none
+        , el [ height (px 50), width fill, Background.color scrollbarColour ] (Element.text " ")
+    ]
 
 
 ---- PROGRAM ----
