@@ -5,8 +5,9 @@ import Debug exposing (todo)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
+import Element.Input exposing (text)
 import Html exposing (Html, div, h1, img, table, tbody, td, text, th, thead, tr)
-import Html.Attributes exposing (src, style)
+import Html.Attributes exposing (placeholder, src, style)
 
 
 
@@ -66,7 +67,6 @@ bggray =
     rgb255 230 230 230
 
 
-
 navBar : Element Msg
 navBar =
     row
@@ -110,7 +110,7 @@ rightPane =
 
 packed : List (Attribute msg)
 packed =
-    [ spacing 0, padding 0, Element.explain Debug.todo ]
+    [ spacing 0, padding 0 ]
 
 
 dataTable : Element Msg
@@ -127,7 +127,17 @@ dataTable =
 
 dataTableFilter : Element Msg
 dataTableFilter =
-    el [ width fill, height (px 20), Background.color bggray ] (Element.text "filter")
+    el [ width fill, height (px 20), Background.color bggray ]
+        (row [] [ Element.text "Search:" ])
+
+
+exampleData : Html msg
+exampleData =
+    tr []
+        [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
+        , td [ style "border" "1px solid black" ] [ Html.text "Cell B1" ]
+        , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
+        ]
 
 
 dataTableContents : Element Msg
@@ -139,57 +149,48 @@ dataTableContents =
             ]
             [ thead [ style "background-color" "darkgrey" ]
                 [ tr []
-                    [ th [ style "border" "1px solid black" ] [ Html.text "Column A" ]
-                    , th [ style "border" "1px solid black" ] [ Html.text "Column B" ]
+                    [ th [ style "border" "1px solid black", Html.Attributes.rowspan 2 ] [ Html.text "Column A" ]
+                    , th [ style "border" "1px solid black", Html.Attributes.colspan 2 ]
+                        [ Html.text "Column B" ]
+                    ]
+                , tr []
+                    [ th [ style "border" "1px solid black" ]
+                        [ Html.text "Column B1" ]
+                    , th [ style "border" "1px solid black" ]
+                        [ Html.text "Column B2" ]
                     ]
                 ]
             , tbody []
-                [ tr []
-                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A1" ]
-                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B1" ]
-                    ]
-                , tr []
-                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
-                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
-                    ]
-                , tr []
-                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
-                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
-                    ]
-                , tr []
-                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
-                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
-                    ]
-                , tr []
-                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
-                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
-                    ]
-                , tr []
-                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
-                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
-                    ]
-                , tr []
-                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
-                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
-                    ]
-                , tr []
-                    [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
-                    , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
-                    ]
+                [ exampleData
+                , exampleData
+                , exampleData
+                , exampleData
+                , exampleData
+                , exampleData
+                , exampleData
+                , exampleData
                 ]
             ]
+
 
 scrollbarColour : Color
 scrollbarColour =
     rgb255 80 80 80
 
+
 dataTableScrollbar : Element Msg
 dataTableScrollbar =
-    column [height fill, width (px 20)] 
-    [
-        el [ height (px 50) ] none
+    html <| 
+        Html.div [style "overflow-y" "scroll", style "height" "200px"] [
+            Html.div [style "height" "10000px", style "width" "1px"] [] 
+        ]
+
+{-    column [ height fill, width (px 20) ]
+        [ el [ height (px 50) ] none
         , el [ height (px 50), width fill, Background.color scrollbarColour ] (Element.text " ")
-    ]
+        ]-}
+
+
 
 
 ---- PROGRAM ----
