@@ -116,48 +116,69 @@ packed =
 dataTable : Html Msg
 dataTable =
     Html.div
-        [ style "height" "300px"
+        [
+        ]
+        [ filterDiv
+        , Html.div
+            [ style "display" "grid"
+             ,style "height" "300px"
         , style "width" "300px"
-        , style "background" "blue"
-        , style "display" "grid"
+            ]
+            [ scrollDiv
+            , contentsDiv
+            ]
+        ]
+
+todoMarginTop = Debug.todo "Need DOM access for margin-top"
+
+scrollDiv : Html Msg
+scrollDiv =
+    Html.div
+        [ style "overflow-y" "scroll"
+        , style "grid-column" "1"
+        , style "grid-row" "1"
+        , style "z-index" "2"
+        , style "pointer-events" "none"
+        , style "margin-top" "47px" 
         ]
         [ Html.div
-            [ style "overflow-y" "scroll"
-            , style "grid-column" "1"
-            , style "grid-row" "1"
-            , style "z-index" "2"
-            , style "pointer-events" "none"
+            [ style "height" "10000px"
+            , style "width" "100%"
             ]
-            [ Html.div
-                [ style "height" "10000px"
-                , style "width" "100%"
-                ]
-                []
-            ]
-        , Html.div
-            [ style "overflow-x" "auto"
-            , style "overflow-y" "scroll"
-            , style "grid-column" "1"
-            , style "grid-row" "1"
-            , style "z-index" "1"
-            ]
-            [ dataTableContents
-            ]
+            []
         ]
 
 
-dataTableFilter : Element Msg
-dataTableFilter =
-    el [ width fill, height (px 20), Background.color bggray ]
-        (row [] [ Element.text "Search:" ])
+contentsDiv : Html Msg
+contentsDiv =
+    Html.div
+        [ style "overflow-x" "auto"
+        --, style "overflow-y" ""
+        , style "grid-column" "1"
+        , style "grid-row" "1"
+        , style "z-index" "1"
+        ]
+        [ dataTableContents
+        ]
+
+
+filterDiv : Html Msg
+filterDiv =
+    Html.div [ style "background" "gray" ]
+    [ Html.input [Html.Attributes.placeholder "Search..."] [] ]
+
+
+cellStyle : Html.Attribute msg
+cellStyle =
+    style "border" "1px solid gray"
 
 
 exampleData : Html msg
 exampleData =
     tr []
-        [ td [ style "border" "1px solid black" ] [ Html.text "Cell A2" ]
-        , td [ style "border" "1px solid black" ] [ Html.text "Cell B1" ]
-        , td [ style "border" "1px solid black" ] [ Html.text "Cell B2" ]
+        [ td [ cellStyle ] [ Html.text "Cell A2" ]
+        , td [ cellStyle ] [ Html.text "Cell B1" ]
+        , td [ cellStyle ] [ Html.text "Cell B2" ]
         ]
 
 
@@ -170,20 +191,20 @@ dataTableContents =
         [ thead [ style "background-color" "darkgrey" ]
             [ tr []
                 [ th
-                    [ style "border" "1px solid black"
+                    [ cellStyle
                     , Html.Attributes.rowspan 2
                     ]
                     [ Html.text "Column A" ]
                 , th
-                    [ style "border" "1px solid black"
+                    [ cellStyle
                     , Html.Attributes.colspan 2
                     ]
                     [ Html.text "Column B" ]
                 ]
             , tr []
-                [ th [ style "border" "1px solid black" ]
+                [ th [ cellStyle ]
                     [ Html.text "Column B1" ]
-                , th [ style "border" "1px solid black" ]
+                , th [ cellStyle ]
                     [ Html.text "Column B2" ]
                 ]
             ]
