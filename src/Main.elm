@@ -49,7 +49,7 @@ view model =
                 [ navBar
                 , row [ height fill, width fill ]
                     [ leftPane
-                    , el [ centerX ] <| dataTable
+                    , el [ centerX ] <| html <| dataTable
                     , rightPane
                     ]
                 ]
@@ -113,14 +113,35 @@ packed =
     [ spacing 0, padding 0 ]
 
 
-dataTable : Element Msg
+dataTable : Html Msg
 dataTable =
-    column
-        packed
-        [ dataTableFilter
-        , row packed
+    Html.div
+        [ style "height" "300px"
+        , style "width" "300px"
+        , style "background" "blue"
+        , style "display" "grid"
+        ]
+        [ Html.div
+            [ style "overflow-y" "scroll"
+            , style "grid-column" "1"
+            , style "grid-row" "1"
+            , style "z-index" "2"
+            , style "pointer-events" "none"
+            ]
+            [ Html.div
+                [ style "height" "10000px"
+                , style "width" "100%"
+                ]
+                []
+            ]
+        , Html.div
+            [ style "overflow-x" "auto"
+            , style "overflow-y" "scroll"
+            , style "grid-column" "1"
+            , style "grid-row" "1"
+            , style "z-index" "1"
+            ]
             [ dataTableContents
-            , dataTableScrollbar
             ]
         ]
 
@@ -140,60 +161,48 @@ exampleData =
         ]
 
 
-dataTableContents : Element Msg
+dataTableContents : Html Msg
 dataTableContents =
-    html <|
-        Html.table
-            [ style "border" "1px solid grey"
-            , style "border-collapse" "collapse"
-            ]
-            [ thead [ style "background-color" "darkgrey" ]
-                [ tr []
-                    [ th [ style "border" "1px solid black", Html.Attributes.rowspan 2 ] [ Html.text "Column A" ]
-                    , th [ style "border" "1px solid black", Html.Attributes.colspan 2 ]
-                        [ Html.text "Column B" ]
+    Html.table
+        [ style "border" "1px solid grey"
+        , style "border-collapse" "collapse"
+        ]
+        [ thead [ style "background-color" "darkgrey" ]
+            [ tr []
+                [ th
+                    [ style "border" "1px solid black"
+                    , Html.Attributes.rowspan 2
                     ]
-                , tr []
-                    [ th [ style "border" "1px solid black" ]
-                        [ Html.text "Column B1" ]
-                    , th [ style "border" "1px solid black" ]
-                        [ Html.text "Column B2" ]
+                    [ Html.text "Column A" ]
+                , th
+                    [ style "border" "1px solid black"
+                    , Html.Attributes.colspan 2
                     ]
+                    [ Html.text "Column B" ]
                 ]
-            , tbody []
-                [ exampleData
-                , exampleData
-                , exampleData
-                , exampleData
-                , exampleData
-                , exampleData
-                , exampleData
-                , exampleData
+            , tr []
+                [ th [ style "border" "1px solid black" ]
+                    [ Html.text "Column B1" ]
+                , th [ style "border" "1px solid black" ]
+                    [ Html.text "Column B2" ]
                 ]
             ]
+        , tbody []
+            [ exampleData
+            , exampleData
+            , exampleData
+            , exampleData
+            , exampleData
+            , exampleData
+            , exampleData
+            , exampleData
+            ]
+        ]
 
 
 scrollbarColour : Color
 scrollbarColour =
     rgb255 80 80 80
-
-
-dataTableScrollbar : Element Msg
-dataTableScrollbar =
-    html <| 
-        Html.div [style "overflow-y" "scroll", style "height" "200px"] [
-            Html.div [style "height" "10000px", style "width" "1px"] [] 
-        ]
-
-{-    column [ height fill, width (px 20) ]
-        [ el [ height (px 50) ] none
-        , el [ height (px 50), width fill, Background.color scrollbarColour ] (Element.text " ")
-        ]-}
-
-
-
-
----- PROGRAM ----
 
 
 main : Program () Model Msg
