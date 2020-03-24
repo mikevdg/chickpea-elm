@@ -2,54 +2,129 @@ module Main exposing (..)
 
 import Browser
 import Debug exposing (todo)
-import Element exposing (..)
+import Element as El
 import Element.Background as Background
 import Element.Border as Border
-import Element.Input exposing (text)
-import Html exposing (Html, div, h1, img, table, tbody, td, text, th, thead, tr)
+import Html exposing (..)
 import Html.Attributes exposing (placeholder, src, style)
+import Html.Events exposing (..)
+import Http
+import Xml.Decode exposing (..)
 
 
 
----- MODEL ----
+---- Progress markers ----
 
 
-type alias Model =
-    {}
+todoSpinner = 
+    Debug.todo "Make a spinner when it's loading data. "
+
+todoReadSchema =
+    Debug.todo "Read the OData schema."
+
+
+todoReadTable =
+    Debug.todo "Read the OData table data"
+
+
+todoScrollBar =
+    Debug.todo "Make the scrollbar scroll"
+
+
+todoSearchBar =
+    Debug.todo "Search bar functionality."
+
+
+todoColumnSort =
+    Debug.todo "Click column headings to sort them."
+
+
+todoColumnRearrange =
+    Debug.todo "Drag and drop headings to rearrange columns."
+
+
+todoHideColumn =
+    Debug.todo "Context menu to hide and show columns"
+
+
+todoEditTable =
+    Debug.todo "Edit cells"
+
+
+
+---- Model ----
+
+
+type Model
+    = Failure
+    | Loading
+    | Success (List String)
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( {}, Cmd.none )
+    ( Loading, getMetadata )
 
 
 
----- UPDATE ----
+---- Update ----
 
 
 type Msg
-    = NoOp
+    = MorePlease
+    | GotMetadata (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+    case msg of
+        MorePlease ->
+            ( Loading, getMetadata )
+
+        GotMetadata result ->
+            case result of
+                Ok xml ->
+                    ( Success (parseXml xml), Cmd.none )
+
+                Err _ ->
+                    ( Failure, Cmd.none )
+
+
+getMetadata : Cmd Msg
+getMetadata =
+    Http.get
+        { url = "https://services.odata.org/TripPinRESTierService/(S(mly0lemodbb4rmdukjup4lcm))/$metadata"
+        , expect = Http.expectString GotMetadata
+        }
+
+
+metadataDecoder : Decoder (List String)
+metadataDecoder =
+    path [ "edmx:DataServices", "Schema", "EntityContainer", "EntitySet" ]
+        (Xml.Decode.list
+            (stringAttr "Name")
+        )
+
+
+parseXml : String -> List String
+parseXml xmlString =
+    Result.withDefault [ "error" ] (Xml.Decode.decodeString metadataDecoder xmlString)
 
 
 
----- VIEW ----
+---- View ----
 
 
 view : Model -> Browser.Document Msg
 view model =
     { title = "OData client"
     , body =
-        [ layout [] <|
-            column [ width fill, height fill, spacingXY 0 0 ]
+        [ El.layout [] <|
+            El.column [ El.width El.fill, El.height El.fill, El.spacingXY 0 0 ]
                 [ navBar
-                , row [ height fill, width fill ]
-                    [ leftPane
-                    , el [ centerX ] <| html <| dataTable
+                , El.row [ El.height El.fill, El.width El.fill ]
+                    [ leftPane model                        
+                        , El.el [ El.centerX ] <| El.html <| dataTable model
                     , rightPane
                     ]
                 ]
@@ -57,50 +132,50 @@ view model =
     }
 
 
-borderColour : Color
+borderColour : El.Color
 borderColour =
-    rgb255 80 80 80
+    El.rgb255 80 80 80
 
 
-bggray : Color
+bggray : El.Color
 bggray =
-    rgb255 230 230 230
+    El.rgb255 230 230 230
 
 
-navBar : Element Msg
+navBar : El.Element Msg
 navBar =
-    row
-        [ width fill
-        , paddingXY 30 4
+    El.row
+        [ El.width El.fill
+        , El.paddingXY 30 4
         , Border.widthEach { bottom = 2, top = 0, left = 0, right = 0 }
         , Border.color borderColour
         , Background.color bggray
         ]
-        [ el [ centerX ] <| Element.text "OData client"
+        [ El.el [ El.centerX ] <| El.text "OData client"
         ]
 
 
-leftPane : Element Msg
-leftPane =
-    column
-        [ height fill
-        , paddingXY 30 4
+leftPane : Model -> El.Element Msg
+leftPane model =
+    El.column
+        [ El.height El.fill
+        , El.paddingXY 30 4
         , Border.widthEach { bottom = 0, top = 0, left = 0, right = 2 }
         , Background.color bggray
         ]
-        [ el [] <| Element.text "Left pane placeholder!"
+        [ El.el [] <| El.html <| viewEntities model   
         ]
 
 
-rightPane : Element Msg
+rightPane : El.Element Msg
 rightPane =
-    column
-        [ height fill
-        , paddingXY 30 4
+    El.column
+        [ El.height El.fill
+        , El.paddingXY 30 4
         , Border.widthEach { bottom = 0, top = 0, left = 2, right = 0 }
         , Background.color bggray
         ]
-        [ el [] <| Element.text "Right pane placeholder!"
+        [ El.el [] <| El.text "Right pane placeholder!"
         ]
 
 
@@ -108,28 +183,25 @@ rightPane =
 {- I need to use HTML here because I need to do more than elm-ui's datatable allows. -}
 
 
-packed : List (Attribute msg)
-packed =
-    [ spacing 0, padding 0 ]
-
-
-dataTable : Html Msg
-dataTable =
+dataTable : Model -> Html Msg
+dataTable model =
     Html.div
-        [
-        ]
+        []
         [ filterDiv
         , Html.div
             [ style "display" "grid"
-             ,style "height" "300px"
-        , style "width" "300px"
+            , style "height" "300px"
+            , style "width" "300px"
             ]
             [ scrollDiv
             , contentsDiv
             ]
         ]
 
-todoMarginTop = Debug.todo "Need DOM access for margin-top"
+
+todoMarginTop =
+    Debug.todo "Need DOM access for margin-top and margin-bottom here (and margin-right later). Otherwise it isn't aligned."
+
 
 scrollDiv : Html Msg
 scrollDiv =
@@ -139,7 +211,8 @@ scrollDiv =
         , style "grid-row" "1"
         , style "z-index" "2"
         , style "pointer-events" "none"
-        , style "margin-top" "47px" 
+        , style "margin-top" "47px"
+        , style "margin-bottom" "12px"
         ]
         [ Html.div
             [ style "height" "10000px"
@@ -153,10 +226,12 @@ contentsDiv : Html Msg
 contentsDiv =
     Html.div
         [ style "overflow-x" "auto"
+
         --, style "overflow-y" ""
         , style "grid-column" "1"
         , style "grid-row" "1"
         , style "z-index" "1"
+        , style "margin-right" "12px"
         ]
         [ dataTableContents
         ]
@@ -165,7 +240,7 @@ contentsDiv =
 filterDiv : Html Msg
 filterDiv =
     Html.div [ style "background" "gray" ]
-    [ Html.input [Html.Attributes.placeholder "Search..."] [] ]
+        [ Html.input [ Html.Attributes.placeholder "Search..." ] [] ]
 
 
 cellStyle : Html.Attribute msg
@@ -221,9 +296,28 @@ dataTableContents =
         ]
 
 
-scrollbarColour : Color
-scrollbarColour =
-    rgb255 80 80 80
+viewEntities : Model -> Html Msg
+viewEntities model =
+    case model of
+        Failure ->
+            div []
+                [ text "Failed to load. "
+                , button [ onClick MorePlease ] [ text "Try Again!" ]
+                ]
+
+        Loading ->
+            text "Loading..."
+
+        Success entityList ->
+            div []
+                [ button [ onClick MorePlease, style "display" "block" ] [ text "Reload!" ]
+                , viewEntityList entityList
+                ]
+
+
+viewEntityList : List String -> Html Msg
+viewEntityList entityList =
+    ul [] (List.map (\it -> li [] [ text it ]) entityList)
 
 
 main : Program () Model Msg
