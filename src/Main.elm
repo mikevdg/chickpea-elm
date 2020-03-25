@@ -10,6 +10,7 @@ import Html.Attributes exposing (placeholder, src, style)
 import Html.Events exposing (..)
 import Http
 import Xml.Decode exposing (..)
+import Json.Decode exposing (..)
 
 
 
@@ -118,8 +119,6 @@ initQuery =
 type alias TableData =
     { rows : List CellValue }
 
-
-
 {- I am one of the cells in a table. -}
 
 
@@ -161,6 +160,19 @@ init =
 type Msg
     = RefreshSchema
     | GotMetadata (Result Http.Error String)
+    | GotTableContents (Result Http.Error String)
+    | ChooseTable String
+
+
+chooseTable : String -> Model -> Model
+chooseTable name model =
+    { schema = model.schema
+    , currentTable =
+        { baseUrl = name
+        , query = model.currentTable.query
+        , tableData = Loading
+        }
+    }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -172,19 +184,43 @@ update msg model =
         GotMetadata result ->
             case result of
                 Ok xml ->
-                    ( { model | schema = parseXml xml }, Cmd.none )
+                    ( { model | schema = parseSchemaXml xml }, Cmd.none )
 
                 Err error ->
                     ( { model | schema = Failure (httpError error) }, Cmd.none )
 
+        GotTableContents result ->
+            case result of 
+            Ok json ->
+                    (model, Cmd.none)
+                    {-( { model | schema = parseTableContents json }, Cmd.none )-}
+
+            Err error ->
+                    ( { model | schema = Failure (httpError error) }, Cmd.none )
+
+
+        ChooseTable entityName ->
+            ( chooseTable entityName model, refreshTable entityName )
+
+
 httpError : Http.Error -> String
-httpError httpE = 
- case httpE of
-    Http.BadUrl string -> "BadURL: "++string
-    Http.Timeout -> "Timeout"
-    Http.NetworkError -> "Network error"
-    Http.BadStatus status -> "Bad status: "++String.fromInt status
-    Http.BadBody body -> "Bad body: "++body
+httpError httpE =
+    case httpE of
+        Http.BadUrl string ->
+            "BadURL: " ++ string
+
+        Http.Timeout ->
+            "Timeout"
+
+        Http.NetworkError ->
+            "Network error"
+
+        Http.BadStatus status ->
+            "Bad status: " ++ String.fromInt status
+
+        Http.BadBody body ->
+            "Bad body: " ++ body
+
 
 getMetadata : Cmd Msg
 getMetadata =
@@ -194,7 +230,17 @@ getMetadata =
         }
 
 
-metadataDecoder : Decoder Schema
+refreshTable :
+    String
+    -> Cmd Msg -- Needs a Query.
+refreshTable tableName =
+    Http.get
+        { url = "https://services.odata.org/TripPinRESTierService/(S(mly0lemodbb4rmdukjup4lcm))/" ++ tableName ++ "?$format=json"
+        , expect = Http.expectString GotMetadata
+        }
+
+
+metadataDecoder : Xml.Decode.Decoder Schema
 metadataDecoder =
     Xml.Decode.map Schema
         (path [ "edmx:DataServices", "Schema", "EntityContainer", "EntitySet" ]
@@ -204,15 +250,36 @@ metadataDecoder =
         )
 
 
-parseXml : String -> Loadable Schema
-parseXml xmlString =
-   let r = Xml.Decode.decodeString metadataDecoder xmlString
-   in 
-    case r of 
-        Ok value -> Loaded value
-        Err error -> Failure error
+parseSchemaXml : String -> Loadable Schema
+parseSchemaXml xmlString =
+    let
+        r =
+            Xml.Decode.decodeString metadataDecoder xmlString
+    in
+    case r of
+        Ok value ->
+            Loaded value
 
+        Err error ->
+            Failure error
 
+{-
+parseTableContents json = 
+      let
+        r =
+            Json.Decode.decodeString tableContentsDecoder json
+    in
+    case r of
+        Ok value ->
+            Loaded value
+
+        Err error ->
+            Failure error
+
+tableContentsDecoder : Json.Decode.Decoder todo
+
+tableContentsDecoder = Debug.todo
+-}
 
 ---- View ----
 
@@ -403,7 +470,7 @@ viewEntities model =
     case model.schema of
         Failure error ->
             div []
-                [ text ("Failed to load: "++error)
+                [ text ("Failed to load: " ++ error)
                 , button [ onClick RefreshSchema ] [ text "Try Again!" ]
                 ]
 
@@ -417,10 +484,19 @@ viewEntities model =
                 ]
 
 
-
 viewEntityList : List String -> Html Msg
 viewEntityList entityList =
-    ul [] (List.map (\it -> li [] [ text it ]) entityList)
+    ul []
+        (List.map
+            (\it ->
+                li
+                    [ onClick (ChooseTable it)
+                    , style "cursor" "pointer"
+                    ]
+                    [ text it ]
+            )
+            entityList
+        )
 
 
 main : Program () Model Msg
