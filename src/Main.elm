@@ -16,8 +16,9 @@ import Xml.Decode exposing (..)
 ---- Progress markers ----
 
 
-todoSpinner = 
+todoSpinner =
     Debug.todo "Make a spinner when it's loading data. "
+
 
 todoReadSchema =
     Debug.todo "Read the OData schema."
@@ -55,15 +56,102 @@ todoEditTable =
 ---- Model ----
 
 
-type Model
-    = Failure
+type alias Model =
+    { schema : Loadable Schema
+    , currentTable : TableModel
+    }
+
+
+type Loadable a
+    = Failure String
     | Loading
-    | Success (List String)
+    | Loaded a
+
+
+
+{- I am a model for the on-page table -}
+
+
+type alias TableModel =
+    { baseUrl : String
+    , query : Query
+    , tableData : Loadable TableData
+
+    --    , schema : Schema
+    --  , edits : Edits
+    }
+
+
+initTableModel : TableModel
+initTableModel =
+    { baseUrl = ""
+    , query = initQuery
+    , tableData = Loading
+    }
+
+
+
+{- I am the "filter" and the "columns" of an on-page table. -}
+
+
+type alias Query =
+    { scrollSkip : Int
+    , scrollTop : Int
+    , visibleColumns : List ColumnDefinition
+
+    --    , filter : Filter
+    }
+
+
+initQuery : Query
+initQuery =
+    { scrollSkip = 100
+    , scrollTop = 0
+    , visibleColumns = []
+    }
+
+
+
+{- I am the cell values of an on-page table. -}
+
+
+type alias TableData =
+    { rows : List CellValue }
+
+
+
+{- I am one of the cells in a table. -}
+
+
+type alias CellValue =
+    String
+
+
+type alias ColumnDefinition =
+    { heading : String
+
+    -- , type : ColumnType
+    }
+
+
+type alias Schema =
+    { endpoints : List String
+    }
+
+
+initSchema : Schema
+initSchema =
+    { endpoints = []
+    }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( Loading, getMetadata )
+    ( { schema = Loading
+      , currentTable = initTableModel
+      }
+    , getMetadata
+    )
 
 
 
@@ -71,24 +159,32 @@ init =
 
 
 type Msg
-    = MorePlease
+    = RefreshSchema
     | GotMetadata (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        MorePlease ->
-            ( Loading, getMetadata )
+        RefreshSchema ->
+            ( { model | schema = Loading }, getMetadata )
 
         GotMetadata result ->
             case result of
                 Ok xml ->
-                    ( Success (parseXml xml), Cmd.none )
+                    ( { model | schema = parseXml xml }, Cmd.none )
 
-                Err _ ->
-                    ( Failure, Cmd.none )
+                Err error ->
+                    ( { model | schema = Failure (httpError error) }, Cmd.none )
 
+httpError : Http.Error -> String
+httpError httpE = 
+ case httpE of
+    Http.BadUrl string -> "BadURL: "++string
+    Http.Timeout -> "Timeout"
+    Http.NetworkError -> "Network error"
+    Http.BadStatus status -> "Bad status: "++String.fromInt status
+    Http.BadBody body -> "Bad body: "++body
 
 getMetadata : Cmd Msg
 getMetadata =
@@ -98,17 +194,23 @@ getMetadata =
         }
 
 
-metadataDecoder : Decoder (List String)
+metadataDecoder : Decoder Schema
 metadataDecoder =
-    path [ "edmx:DataServices", "Schema", "EntityContainer", "EntitySet" ]
-        (Xml.Decode.list
-            (stringAttr "Name")
+    Xml.Decode.map Schema
+        (path [ "edmx:DataServices", "Schema", "EntityContainer", "EntitySet" ]
+            (Xml.Decode.list
+                (stringAttr "Name")
+            )
         )
 
 
-parseXml : String -> List String
+parseXml : String -> Loadable Schema
 parseXml xmlString =
-    Result.withDefault [ "error" ] (Xml.Decode.decodeString metadataDecoder xmlString)
+   let r = Xml.Decode.decodeString metadataDecoder xmlString
+   in 
+    case r of 
+        Ok value -> Loaded value
+        Err error -> Failure error
 
 
 
@@ -123,8 +225,8 @@ view model =
             El.column [ El.width El.fill, El.height El.fill, El.spacingXY 0 0 ]
                 [ navBar
                 , El.row [ El.height El.fill, El.width El.fill ]
-                    [ leftPane model                        
-                        , El.el [ El.centerX ] <| El.html <| dataTable model
+                    [ leftPane model
+                    , El.el [ El.centerX ] <| El.html <| dataTable model
                     , rightPane
                     ]
                 ]
@@ -163,7 +265,7 @@ leftPane model =
         , Border.widthEach { bottom = 0, top = 0, left = 0, right = 2 }
         , Background.color bggray
         ]
-        [ El.el [] <| El.html <| viewEntities model   
+        [ El.el [] <| El.html <| viewEntities model
         ]
 
 
@@ -298,21 +400,22 @@ dataTableContents =
 
 viewEntities : Model -> Html Msg
 viewEntities model =
-    case model of
-        Failure ->
+    case model.schema of
+        Failure error ->
             div []
-                [ text "Failed to load. "
-                , button [ onClick MorePlease ] [ text "Try Again!" ]
+                [ text ("Failed to load: "++error)
+                , button [ onClick RefreshSchema ] [ text "Try Again!" ]
                 ]
 
         Loading ->
             text "Loading..."
 
-        Success entityList ->
+        Loaded data ->
             div []
-                [ button [ onClick MorePlease, style "display" "block" ] [ text "Reload!" ]
-                , viewEntityList entityList
+                [ button [ onClick RefreshSchema, style "display" "block" ] [ text "Reload!" ]
+                , viewEntityList data.endpoints
                 ]
+
 
 
 viewEntityList : List String -> Html Msg
