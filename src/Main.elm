@@ -9,8 +9,8 @@ import Html exposing (..)
 import Html.Attributes exposing (placeholder, src, style)
 import Html.Events exposing (..)
 import Http
-import Xml.Decode exposing (..)
 import Json.Decode exposing (..)
+import Xml.Decode exposing (..)
 
 
 
@@ -119,6 +119,8 @@ initQuery =
 type alias TableData =
     { rows : List CellValue }
 
+
+
 {- I am one of the cells in a table. -}
 
 
@@ -190,14 +192,12 @@ update msg model =
                     ( { model | schema = Failure (httpError error) }, Cmd.none )
 
         GotTableContents result ->
-            case result of 
-            Ok json ->
-                    (model, Cmd.none)
-                    {-( { model | schema = parseTableContents json }, Cmd.none )-}
+            case result of
+                Ok json ->
+                    ( { model | schema = parseTableContents json }, Cmd.none )
 
-            Err error ->
+                Err error ->
                     ( { model | schema = Failure (httpError error) }, Cmd.none )
-
 
         ChooseTable entityName ->
             ( chooseTable entityName model, refreshTable entityName )
@@ -236,7 +236,7 @@ refreshTable :
 refreshTable tableName =
     Http.get
         { url = "https://services.odata.org/TripPinRESTierService/(S(mly0lemodbb4rmdukjup4lcm))/" ++ tableName ++ "?$format=json"
-        , expect = Http.expectString GotMetadata
+        , expect = Http.expectString GotTableContents
         }
 
 
@@ -263,23 +263,24 @@ parseSchemaXml xmlString =
         Err error ->
             Failure error
 
-{-
-parseTableContents json = 
-      let
-        r =
-            Json.Decode.decodeString tableContentsDecoder json
-    in
-    case r of
-        Ok value ->
-            Loaded value
+parseTableContents : String -> Loadable Schema
+parseTableContents json =
+         let
+           r =
+               Json.Decode.decodeString tableContentsDecoder json
+       in
+       case r of
+           Ok value ->
+               Loaded value
 
-        Err error ->
-            Failure error
+           Err error ->
+               Failure (Debug.toString error)
+               
 
 tableContentsDecoder : Json.Decode.Decoder todo
 
-tableContentsDecoder = Debug.todo
--}
+tableContentsDecoder = Debug.todo "tableContentsDecoder"
+
 
 ---- View ----
 
