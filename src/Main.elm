@@ -1,159 +1,30 @@
 module Main exposing (..)
 
 import Browser
-import Debug exposing (todo)
 import Element as El
 import Element.Background as Background
 import Element.Border as Border
-import Html exposing (..)
-import Html.Attributes exposing (placeholder, src, style)
-import Html.Events exposing (..)
-import Http
-import Json.Decode exposing (..)
-import Xml.Decode exposing (..)
-
-
-
----- Progress markers ----
-
-
-todoSpinner =
-    Debug.todo "Make a spinner when it's loading data. "
-
-
-todoReadSchema =
-    Debug.todo "Read the OData schema."
-
-
-todoReadTable =
-    Debug.todo "Read the OData table data"
-
-
-todoScrollBar =
-    Debug.todo "Make the scrollbar scroll"
-
-
-todoSearchBar =
-    Debug.todo "Search bar functionality."
-
-
-todoColumnSort =
-    Debug.todo "Click column headings to sort them."
-
-
-todoColumnRearrange =
-    Debug.todo "Drag and drop headings to rearrange columns."
-
-
-todoHideColumn =
-    Debug.todo "Context menu to hide and show columns"
-
-
-todoEditTable =
-    Debug.todo "Edit cells"
-
-
-
----- Model ----
-
-
-type alias Model =
-    { schema : Loadable Schema
-    , currentTable : TableModel
-    }
-
-
-type Loadable a
-    = Failure String
-    | Loading
-    | Loaded a
-
-
-
-{- I am a model for the on-page table -}
-
-
-type alias TableModel =
-    { baseUrl : String
-    , query : Query
-    , tableData : Loadable TableData
-
-    --    , schema : Schema
-    --  , edits : Edits
-    }
-
-
-initTableModel : TableModel
-initTableModel =
-    { baseUrl = ""
-    , query = initQuery
-    , tableData = Loading
-    }
-
-
-
-{- I am the "filter" and the "columns" of an on-page table. -}
-
-
-type alias Query =
-    { scrollSkip : Int
-    , scrollTop : Int
-    , visibleColumns : List ColumnDefinition
-
-    --    , filter : Filter
-    }
-
-
-initQuery : Query
-initQuery =
-    { scrollSkip = 100
-    , scrollTop = 0
-    , visibleColumns = []
-    }
-
-
-
-{- I am the cell values of an on-page table. -}
-
-
-type alias TableData =
-    { rows : List CellValue }
-
-
-
-{- I am one of the cells in a table. -}
-
-
-type alias CellValue =
-    String
-
-
-type alias ColumnDefinition =
-    { heading : String
-
-    -- , type : ColumnType
-    }
-
-
-type alias Schema =
-    { endpoints : List String
-    }
-
-
-initSchema : Schema
-initSchema =
-    { endpoints = []
-    }
-
+import Html exposing (Html, ul, li, text, div, button)
+import Html.Events exposing (onClick)
+import Html.Attributes exposing (style)
+import DataTable as Dt
 
 init : ( Model, Cmd Msg )
 init =
-    ( { schema = Loading
-      , currentTable = initTableModel
+    ( { schema = Dt.Loading
+      , currentTable = Dt.Loading
       }
-    , getMetadata
+    , Dt.httpGetSchema
     )
 
+---- Model ----
+
+{- The currentTable here is Dt.Loadable because it doesn't have columns yet. It's contents
+are also Dt.Loadable because they are constantly refreshing when the user scrolls.-}
+type alias Model =
+    { schema : Dt.Loadable Dt.Schema
+    , currentTable : Dt.Loadable Dt.DataTableModel
+    }
 
 
 ---- Update ----
@@ -161,126 +32,35 @@ init =
 
 type Msg
     = RefreshSchema
-    | GotMetadata (Result Http.Error String)
-    | GotTableContents (Result Http.Error String)
     | ChooseTable String
-
-
-chooseTable : String -> Model -> Model
-chooseTable name model =
-    { schema = model.schema
-    , currentTable =
-        { baseUrl = name
-        , query = model.currentTable.query
-        , tableData = Loading
-        }
-    }
+    | SchemaMessage Dt.SchemaMessage
+    | DataTableMessage Dt.DataTableMessage
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
+
+update message model =
+    case message of
         RefreshSchema ->
-            ( { model | schema = Loading }, getMetadata )
+            ( { model | schema = Dt.Loading }, Dt.httpGetSchema )
 
-        GotMetadata result ->
-            case result of
-                Ok xml ->
-                    ( { model | schema = parseSchemaXml xml }, Cmd.none )
+        DataTableMessage m -> 
+            ( { model | currentTable = Dt.updateDataTable m model.currentTable}, 
+            Cmd.none)
 
-                Err error ->
-                    ( { model | schema = Failure (httpError error) }, Cmd.none )
-
-        GotTableContents result ->
-            case result of
-                Ok json ->
-                    ( { model | schema = parseTableContents json }, Cmd.none )
-
-                Err error ->
-                    ( { model | schema = Failure (httpError error) }, Cmd.none )
+        SchemaMessage m ->
+            ( { model | schema = Dt.updateSchema m }
+            ,Cmd.none)
 
         ChooseTable entityName ->
-            ( chooseTable entityName model, refreshTable entityName )
+            ( chooseTable entityName model, Dt.refreshTable entityName )
 
 
-httpError : Http.Error -> String
-httpError httpE =
-    case httpE of
-        Http.BadUrl string ->
-            "BadURL: " ++ string
-
-        Http.Timeout ->
-            "Timeout"
-
-        Http.NetworkError ->
-            "Network error"
-
-        Http.BadStatus status ->
-            "Bad status: " ++ String.fromInt status
-
-        Http.BadBody body ->
-            "Bad body: " ++ body
-
-
-getMetadata : Cmd Msg
-getMetadata =
-    Http.get
-        { url = "https://services.odata.org/TripPinRESTierService/(S(mly0lemodbb4rmdukjup4lcm))/$metadata"
-        , expect = Http.expectString GotMetadata
-        }
-
-
-refreshTable :
-    String
-    -> Cmd Msg -- Needs a Query.
-refreshTable tableName =
-    Http.get
-        { url = "https://services.odata.org/TripPinRESTierService/(S(mly0lemodbb4rmdukjup4lcm))/" ++ tableName ++ "?$format=json"
-        , expect = Http.expectString GotTableContents
-        }
-
-
-metadataDecoder : Xml.Decode.Decoder Schema
-metadataDecoder =
-    Xml.Decode.map Schema
-        (path [ "edmx:DataServices", "Schema", "EntityContainer", "EntitySet" ]
-            (Xml.Decode.list
-                (stringAttr "Name")
-            )
-        )
-
-
-parseSchemaXml : String -> Loadable Schema
-parseSchemaXml xmlString =
-    let
-        r =
-            Xml.Decode.decodeString metadataDecoder xmlString
-    in
-    case r of
-        Ok value ->
-            Loaded value
-
-        Err error ->
-            Failure error
-
-parseTableContents : String -> Loadable Schema
-parseTableContents json =
-         let
-           r =
-               Json.Decode.decodeString tableContentsDecoder json
-       in
-       case r of
-           Ok value ->
-               Loaded value
-
-           Err error ->
-               Failure (Debug.toString error)
-               
-
-tableContentsDecoder : Json.Decode.Decoder todo
-
-tableContentsDecoder = Debug.todo "tableContentsDecoder"
-
+chooseTable : String -> Model -> (Model, Msg)
+chooseTable name model =
+    { schema = model.schema
+    , currentTable = Dt.initDataTableModel name model.schema
+    }
 
 ---- View ----
 
@@ -294,7 +74,7 @@ view model =
                 [ navBar
                 , El.row [ El.height El.fill, El.width El.fill ]
                     [ leftPane model
-                    , El.el [ El.centerX ] <| El.html <| dataTable model
+                    , El.el [ El.centerX ] <| El.html <| Dt.viewDataTable model.currentTable
                     , rightPane
                     ]
                 ]
@@ -349,136 +129,29 @@ rightPane =
         ]
 
 
-
-{- I need to use HTML here because I need to do more than elm-ui's datatable allows. -}
-
-
-dataTable : Model -> Html Msg
-dataTable model =
-    Html.div
-        []
-        [ filterDiv
-        , Html.div
-            [ style "display" "grid"
-            , style "height" "300px"
-            , style "width" "300px"
-            ]
-            [ scrollDiv
-            , contentsDiv
-            ]
-        ]
-
-
-todoMarginTop =
-    Debug.todo "Need DOM access for margin-top and margin-bottom here (and margin-right later). Otherwise it isn't aligned."
-
-
-scrollDiv : Html Msg
-scrollDiv =
-    Html.div
-        [ style "overflow-y" "scroll"
-        , style "grid-column" "1"
-        , style "grid-row" "1"
-        , style "z-index" "2"
-        , style "pointer-events" "none"
-        , style "margin-top" "47px"
-        , style "margin-bottom" "12px"
-        ]
-        [ Html.div
-            [ style "height" "10000px"
-            , style "width" "100%"
-            ]
-            []
-        ]
-
-
-contentsDiv : Html Msg
-contentsDiv =
-    Html.div
-        [ style "overflow-x" "auto"
-
-        --, style "overflow-y" ""
-        , style "grid-column" "1"
-        , style "grid-row" "1"
-        , style "z-index" "1"
-        , style "margin-right" "12px"
-        ]
-        [ dataTableContents
-        ]
-
-
-filterDiv : Html Msg
-filterDiv =
-    Html.div [ style "background" "gray" ]
-        [ Html.input [ Html.Attributes.placeholder "Search..." ] [] ]
-
-
-cellStyle : Html.Attribute msg
-cellStyle =
-    style "border" "1px solid gray"
-
-
-exampleData : Html msg
-exampleData =
-    tr []
-        [ td [ cellStyle ] [ Html.text "Cell A2" ]
-        , td [ cellStyle ] [ Html.text "Cell B1" ]
-        , td [ cellStyle ] [ Html.text "Cell B2" ]
-        ]
-
-
-dataTableContents : Html Msg
-dataTableContents =
-    Html.table
-        [ style "border" "1px solid grey"
-        , style "border-collapse" "collapse"
-        ]
-        [ thead [ style "background-color" "darkgrey" ]
-            [ tr []
-                [ th
-                    [ cellStyle
-                    , Html.Attributes.rowspan 2
-                    ]
-                    [ Html.text "Column A" ]
-                , th
-                    [ cellStyle
-                    , Html.Attributes.colspan 2
-                    ]
-                    [ Html.text "Column B" ]
-                ]
-            , tr []
-                [ th [ cellStyle ]
-                    [ Html.text "Column B1" ]
-                , th [ cellStyle ]
-                    [ Html.text "Column B2" ]
-                ]
-            ]
-        , tbody []
-            [ exampleData
-            , exampleData
-            , exampleData
-            , exampleData
-            , exampleData
-            , exampleData
-            , exampleData
-            , exampleData
-            ]
-        ]
+main : Program () Model Msg
+main =
+    Browser.document
+        { view = view
+        , init = \_ -> init
+        , update = update
+        , subscriptions = always Sub.none
+        }
 
 
 viewEntities : Model -> Html Msg
 viewEntities model =
     case model.schema of
-        Failure error ->
+        Dt.Failure error ->
             div []
                 [ text ("Failed to load: " ++ error)
                 , button [ onClick RefreshSchema ] [ text "Try Again!" ]
                 ]
 
-        Loading ->
+        Dt.Loading ->
             text "Loading..."
 
-        Loaded data ->
+        Dt.Loaded data ->
             div []
                 [ button [ onClick RefreshSchema, style "display" "block" ] [ text "Reload!" ]
                 , viewEntityList data.endpoints
@@ -498,13 +171,3 @@ viewEntityList entityList =
             )
             entityList
         )
-
-
-main : Program () Model Msg
-main =
-    Browser.document
-        { view = view
-        , init = \_ -> init
-        , update = update
-        , subscriptions = always Sub.none
-        }
