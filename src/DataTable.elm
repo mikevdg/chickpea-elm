@@ -52,7 +52,7 @@ todoEditTable =
 type SchemaMessage =
     GotHttpSchema (Result Http.Error String)
 
-type DataTableMessage = 
+type Msg = 
     GotHttpTableContents (Result Http.Error String)
 
 type Loadable a
@@ -140,28 +140,36 @@ initSchema =
 
 
 -- Update --
-updateDataTable : DataTableMessage -> DataTableModel -> (DataTableModel, Cmd DataTableMessage)
-updateDataTable msg model =
-    case msg of
-        GotHttpTableContents result ->
-            case result of
+
+
+updateDataTable : Msg -> Loadable DataTableModel -> Loadable DataTableModel
+updateDataTable msg loading =
+    case loading of
+       Failure foo -> 
+        Failure foo
+       Loading -> 
+           Loading
+       Loaded model -> 
+            case msg of
+             GotHttpTableContents result ->
+              case result of
                 Ok json ->
-                    ( { model | tableData = parseTableContents json }, Cmd.none )
+                    Loaded { model | tableData = parseTableContents json }
 
                 Err error ->
-                    ( { model | tableData = Failure (httpError error) }, Cmd.none )
+                    Loaded { model | tableData = Failure (httpError error) }
+       
 
-updateSchema : SchemaMessage -> (Loadable Schema, Cmd SchemaMessage)
+updateSchema : SchemaMessage -> Loadable Schema
 updateSchema msg =
     case msg of
         GotHttpSchema result ->
             case result of
                 Ok xml ->
-                    ( parseSchemaXml xml , Cmd.none )
+                 parseSchemaXml xml
 
                 Err error ->
-                    ( Failure (httpError error) , Cmd.none )
-
+                    Failure (httpError error) 
 
 
 httpGetSchema : Cmd SchemaMessage
@@ -174,7 +182,7 @@ httpGetSchema =
 
 refreshTable :
     String
-    -> Cmd DataTableMessage -- Needs a Query.
+    -> Cmd Msg -- Needs a Query.
 refreshTable tableName =
     Http.get
         { url = "https://services.odata.org/TripPinRESTierService/(S(mly0lemodbb4rmdukjup4lcm))/" ++ tableName ++ "?$format=json"
@@ -223,7 +231,7 @@ tableContentsDecoder : Json.Decode.Decoder todo
 
 tableContentsDecoder = Debug.todo "tableContentsDecoder"
 
-viewDataTable : Loadable DataTableModel -> Html DataTableMessage
+viewDataTable : Loadable DataTableModel -> Html Msg
 viewDataTable model =
     Html.div
         []
@@ -243,7 +251,7 @@ todoMarginTop =
     Debug.todo "Need DOM access for margin-top and margin-bottom here (and margin-right later). Otherwise it isn't aligned."
 
 
-scrollDiv : Html DataTableMessage
+scrollDiv : Html Msg
 scrollDiv =
     Html.div
         [ style "overflow-y" "scroll"
@@ -262,7 +270,7 @@ scrollDiv =
         ]
 
 
-contentsDiv : Html DataTableMessage
+contentsDiv : Html Msg
 contentsDiv =
     Html.div
         [ style "overflow-x" "auto"
@@ -277,7 +285,7 @@ contentsDiv =
         ]
 
 
-filterDiv : Html DataTableMessage
+filterDiv : Html Msg
 filterDiv =
     Html.div [ style "background" "gray" ]
         [ Html.input [ Html.Attributes.placeholder "Search..." ] [] ]
@@ -297,7 +305,7 @@ exampleData =
         ]
 
 
-dataTableContents : Html DataTableMessage
+dataTableContents : Html Msg
 dataTableContents =
     Html.table
         [ style "border" "1px solid grey"

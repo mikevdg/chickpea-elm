@@ -14,7 +14,7 @@ init =
     ( { schema = Dt.Loading
       , currentTable = Dt.Loading
       }
-    , Dt.httpGetSchema
+    , Cmd.map SchemaMessage Dt.httpGetSchema
     )
 
 ---- Model ----
@@ -34,7 +34,7 @@ type Msg
     = RefreshSchema
     | ChooseTable String
     | SchemaMessage Dt.SchemaMessage
-    | DataTableMessage Dt.DataTableMessage
+    | DataTableMessage Dt.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -42,25 +42,29 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     case message of
         RefreshSchema ->
-            ( { model | schema = Dt.Loading }, Dt.httpGetSchema )
+            ( { model | schema = Dt.Loading }, (Cmd.map SchemaMessage Dt.httpGetSchema) )
 
         DataTableMessage m -> 
-            ( { model | currentTable = Dt.updateDataTable m model.currentTable}, 
-            Cmd.none)
+            ( { model | currentTable = Dt.updateDataTable m model.currentTable} 
+            , Cmd.none)
 
         SchemaMessage m ->
             ( { model | schema = Dt.updateSchema m }
             ,Cmd.none)
 
         ChooseTable entityName ->
-            ( chooseTable entityName model, Dt.refreshTable entityName )
+            ( chooseTable entityName model, (Cmd.map DataTableMessage (Dt.refreshTable entityName)) )
 
 
-chooseTable : String -> Model -> (Model, Msg)
+chooseTable : String -> Model -> Model
 chooseTable name model =
-    { schema = model.schema
-    , currentTable = Dt.initDataTableModel name model.schema
-    }
+    case model.schema of
+     Dt.Failure reason -> model
+     Dt.Loading -> model
+     Dt.Loaded schema -> 
+      {   schema = Dt.Loaded schema
+        , currentTable = Dt.Loaded (Dt.initDataTableModel name schema)
+       }
 
 ---- View ----
 
@@ -74,7 +78,7 @@ view model =
                 [ navBar
                 , El.row [ El.height El.fill, El.width El.fill ]
                     [ leftPane model
-                    , El.el [ El.centerX ] <| El.html <| Dt.viewDataTable model.currentTable
+                    , El.el [ El.centerX ] <| El.html <| Html.map DataTableMessage (Dt.viewDataTable model.currentTable)
                     , rightPane
                     ]
                 ]
