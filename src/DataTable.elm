@@ -166,7 +166,7 @@ updateSchema msg =
         GotHttpSchema result ->
             case result of
                 Ok xml ->
-                 parseSchemaXml xml
+                    parseSchemaXml xml
 
                 Err error ->
                     Failure (httpError error) 
@@ -226,7 +226,37 @@ parseTableContents json =
            Err error ->
                Failure (Debug.toString error)
                
+{- Example contents: 
 
+{
+    "@odata.context":"https://services.odata.org/TripPinRESTierService/(S(mly0lemodbb4rmdukjup4lcm))/$metadata#Airports",
+    "value":[
+        {"Name":"San Francisco International Airport"
+        ,"IcaoCode":"KSFO"
+        ,"IataCode":"SFO"
+        ,"Location": {
+            "Address":"South McDonnell Road
+            , San Francisco
+            , CA 94128"
+            ,"Loc":{
+                "type":"Point",
+                "coordinates":[-122.374722222222,37.6188888888889],
+                "crs":{
+                    "type":"name",
+                    "properties":{"name":"EPSG:4326"}
+                }
+            },
+            "City":{
+                "Name":"San Francisco",
+                "CountryRegion":"United States",
+                "Region":"California"
+            }
+        }
+        }, ...etc
+    ]
+}
+
+-}
 tableContentsDecoder : Json.Decode.Decoder todo
 
 tableContentsDecoder = Debug.todo "tableContentsDecoder"
