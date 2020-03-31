@@ -158,7 +158,7 @@ viewEntities model =
         Dt.Loaded data ->
             div []
                 [ button [ onClick RefreshSchema, style "display" "block" ] [ text "Reload!" ]
-                , viewEntityList data.endpoints
+                , viewEntityList data.entities
                 ]
 
 

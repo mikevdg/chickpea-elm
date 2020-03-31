@@ -5,7 +5,7 @@ import Html.Attributes exposing (placeholder, style)
 import Html.Events exposing (..)
 import Http
 import Json.Decode exposing (..)
-import Xml.Decode exposing (..)
+
 import Debug exposing (todo)
 
 ---- Progress markers ----
@@ -123,19 +123,38 @@ type alias CellValue =
 
 type alias ColumnDefinition =
     { heading : String
-
-    -- , type : ColumnType
+     , columnType : ColumnType
     }
 
+type ColumnType =
+    EdmString
+    | Int64
+    | SubColumns (List ColumnDefinition)
+    | EdmGuid
+    | EdmDateTimeOffset
+    | EdmDuration
+    
 
-type alias Schema =
-    { endpoints : List String
-    }
+{- Schema model. The terminology is all from OData -}
+
+type alias Schema = List EntitySetEntry
+
+type alias  EntitySetEntry = {
+    name : String
+    , definition : String -- Name of the EntityType 
+    , value : EntitySetOrFunctionOrAction
+ }
+
+type EntitySetOrFunctionOrAction = 
+    EntitySet String (List ColumnDefinition)
+    | Function -- TODO
+    | Action -- TODO
+
 
 
 initSchema : Schema
 initSchema =
-    { endpoints = []
+    { entities = []
     }
 
 
@@ -189,22 +208,11 @@ refreshTable tableName =
         , expect = Http.expectString GotHttpTableContents
         }
 
-
-metadataDecoder : Xml.Decode.Decoder Schema
-metadataDecoder =
-    Xml.Decode.map Schema
-        (path [ "edmx:DataServices", "Schema", "EntityContainer", "EntitySet" ]
-            (Xml.Decode.list
-                (stringAttr "Name")
-            )
-        )
-
-
 parseSchemaXml : String -> Loadable Schema
 parseSchemaXml xmlString =
     let
         r =
-            Xml.Decode.decodeString metadataDecoder xmlString
+            Xml.Decode.decodeString schemaDecoder xmlString
     in
     case r of
         Ok value ->
@@ -392,3 +400,15 @@ httpError httpE =
 
         Http.BadBody body ->
             "Bad body: " ++ body
+
+
+
+
+schemaDecoder : Xml.Decode.Decoder Schema
+schemaDecoder =
+    Xml.Decode.map Schema
+        (path [ "edmx:DataServices", "Schema", "EntityContainer", "EntitySet" ]
+            (Xml.Decode.list
+                (stringAttr "Name")
+            )
+        )
