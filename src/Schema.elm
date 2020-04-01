@@ -3,6 +3,7 @@ module Schema exposing (schemaDecoder)
 import Xml.Decode exposing (..)
 
 {- Parsing the schema -}
+{- All the terminology here is OData terminology. -} 
 
 schemaDecoder : Xml.Decode.Decoder Schema
 schemaDecoder =
@@ -17,15 +18,30 @@ decodeSchemaEntry =
     ]
 
 decodeEntityType : Decoder SchemaEntry
-decodeEntityType = path ["EntityType"] (list decodeEntityTypeEntry)
+decodeEntityType = 
+    (map2 asEntityType 
+        (path ["EntityType"] (single (stringAttr "name")))
+        (path ["EntityType"] (list decodeEntityTypeEntry)))
+
+asEntityType : String -> List EntityTypeEntry -> SchemaEntry
+asEntityType name list = Debug.todo "asEntityType"
 
 decodeComplexType : Decoder SchemaEntry
-decodeComplexType = path ["ComplexType"] ComplexType
+decodeComplexType = path ["ComplexType"] (Debug.todo "decodeComplexType")
 
 decodeEntityTypeEntry : Decoder EntityTypeEntry
 decodeEntityTypeEntry = oneOf [
-    ...working here.
-]
+    decodeProperty
+    , decodeNavigationProperty
+ ]
+
+decodeProperty : Decoder EntityTypeEntry
+decodeProperty = path ["Property"]
+    ( Debug.todo "decodeProperty")
+
+decodeNavigationProperty : Decoder EntityTypeEntry
+decodeNavigationProperty = path ["NavigationProperty"] 
+    (Debug.todo "decodeNavigationProperty")
 
 type alias Schema = List SchemaEntry
 
@@ -46,6 +62,11 @@ type alias PropertyDetails = {
     name : String
     , entityType : String -- "type=..."
     , nullable : Bool
+ }
+
+type alias NavigationPropertyDetails = {
+    name : String
+    , entityType : String
  }
 
 type EntityContainerEntry =
