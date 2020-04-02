@@ -4,7 +4,8 @@ import Html exposing (..)
 import Html.Attributes exposing (placeholder, style)
 import Html.Events exposing (..)
 import Http
-import Json.Decode exposing (..)
+import Json.Decode as JD
+import Dict exposing (Dict)
 
 import Debug exposing (todo)
 
@@ -137,7 +138,7 @@ type ColumnType =
 
 {- Schema model. The terminology is all from OData -}
 
-type alias Schema = List EntitySetEntry
+type alias Schema = Dict String EntitySetEntry
 
 type alias  EntitySetEntry = {
     name : String
@@ -265,9 +266,38 @@ parseTableContents json =
 }
 
 -}
-tableContentsDecoder : Json.Decode.Decoder todo
+tableContentsDecoder : Schema -> String -> JD.Decoder TableData
 
-tableContentsDecoder = Debug.todo "tableContentsDecoder"
+tableContentsDecoder schema tableName =
+    let ed = entityDecoder schema tableName
+    in 
+    JD.map 
+        (\a -> {rows=a})
+        JD.field "value" <|
+            JD.array ed
+
+entityDecoder : Schema -> String -> JD.Decoder (List CellValue)
+entityDecoder schema tableName =
+    let columns = columnDefinitions schema tableName
+    in entityDecoderImpl columns
+        
+entityDecoderImpl : (List ColumnDefinition) -> JD.Decoder (List CellValue)
+entityDecoderImpl columnDefs =
+    case columnDefs of
+        [] -> []
+        head::tail -> entityColumnDecoderFor head <| entityDecoderImpl tail
+
+entityColumnDecoderFor : ColumnDefinition -> JD.Decoder CellValue
+entityColumnDecoderFor columnDefinition =
+    JD.string -- TODO
+
+columnDefinitions : Schema -> String -> (List ColumnDefinition)
+columnDefinitions schema tableName =
+    Dict.get schema tableName
+    |> .value
+    |> columnDefinitions
+
+{- Views -}
 
 viewDataTable : Loadable DataTableModel -> Html Msg
 viewDataTable model =

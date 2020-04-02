@@ -10,6 +10,7 @@ schemaDecoder =
     path [ "edmx:DataServices", "Schema" ]
         ( Xml.Decode.list decodeSchemaEntry )
     
+
 decodeSchemaEntry : Decoder SchemaEntry
 decodeSchemaEntry =
     oneOf [
@@ -19,15 +20,22 @@ decodeSchemaEntry =
 
 decodeEntityType : Decoder SchemaEntry
 decodeEntityType = 
-    (map2 asEntityType 
+    map2 EntityType
         (path ["EntityType"] (single (stringAttr "name")))
-        (path ["EntityType"] (list decodeEntityTypeEntry)))
+        (path ["EntityType"] (list decodeEntityTypeEntry))
 
+{-
+map2 : (a -> b -> value) -> Decoder a -> Decoder b -> Decoder value
 asEntityType : String -> List EntityTypeEntry -> SchemaEntry
-asEntityType name list = Debug.todo "asEntityType"
+path: List String -> ListDecoder a -> Decoder a
+
+-}
 
 decodeComplexType : Decoder SchemaEntry
-decodeComplexType = path ["ComplexType"] (Debug.todo "decodeComplexType")
+decodeComplexType = 
+    map2 ComplexType
+        (path ["ComplexType"] (single (stringAttr "name")))
+        (path ["ComplexType"] (list decodeEntityTypeEntry))
 
 decodeEntityTypeEntry : Decoder EntityTypeEntry
 decodeEntityTypeEntry = oneOf [
@@ -46,8 +54,8 @@ decodeNavigationProperty = path ["NavigationProperty"]
 type alias Schema = List SchemaEntry
 
 type SchemaEntry = 
-    EntityType String EntityTypeEntry
-    | ComplexType -- TODO
+    EntityType String (List EntityTypeEntry)
+    | ComplexType String (List EntityTypeEntry)
     | EnumType -- TODO
     | Function
     | Action
