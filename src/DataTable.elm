@@ -5,9 +5,9 @@ import Html.Attributes exposing (placeholder, style)
 import Html.Events exposing (..)
 import Http
 import Json.Decode as JD
+import Xml.Decode
 import Dict exposing (Dict)
-
-import Debug exposing (todo)
+import Schema
 
 ---- Progress markers ----
 
@@ -111,9 +111,9 @@ initQuery =
 
 
 type alias TableData =
-    { rows : List CellValue }
+    { rows : List Row }
 
-
+type alias Row = List CellValue
 
 {- I am one of the cells in a table. -}
 
@@ -138,24 +138,22 @@ type ColumnType =
 
 {- Schema model. The terminology is all from OData -}
 
-type alias Schema = Dict String EntitySetEntry
-
-type alias  EntitySetEntry = {
-    name : String
-    , definition : String -- Name of the EntityType 
-    , value : EntitySetOrFunctionOrAction
+type alias Schema = {
+    tables : Dict String Table
+--    , functions : ...
+--   , actions: ...
  }
 
-type EntitySetOrFunctionOrAction = 
-    EntitySet String (List ColumnDefinition)
-    | Function -- TODO
-    | Action -- TODO
-
+type alias Table = {
+    name : String
+    , definition : String -- Name of the EntityType 
+    , columns : (List ColumnDefinition)
+ }
 
 
 initSchema : Schema
 initSchema =
-    { entities = []
+    { tables = Dict.empty
     }
 
 
@@ -212,21 +210,23 @@ refreshTable tableName =
 parseSchemaXml : String -> Loadable Schema
 parseSchemaXml xmlString =
     let
-        r =
-            Xml.Decode.decodeString schemaDecoder xmlString
+        r = Xml.Decode.decodeString Schema.schemaDecoder xmlString
     in
     case r of
         Ok value ->
-            Loaded value
+            Loaded <| toTableSchema value
 
         Err error ->
             Failure error
+
+toTableSchema : Schema.Schema -> Schema
+toTableSchema = Debug.todo "toTableSchema"
 
 parseTableContents : String -> Loadable TableData
 parseTableContents json =
          let
            r =
-               Json.Decode.decodeString tableContentsDecoder json
+               JD.decodeString tableContentsDecoder json
        in
        case r of
            Ok value ->
@@ -273,8 +273,8 @@ tableContentsDecoder schema tableName =
     in 
     JD.map 
         (\a -> {rows=a})
-        JD.field "value" <|
-            JD.array ed
+        (JD.field "value" <|
+            JD.list ed)
 
 entityDecoder : Schema -> String -> JD.Decoder (List CellValue)
 entityDecoder schema tableName =
@@ -291,11 +291,13 @@ entityColumnDecoderFor : ColumnDefinition -> JD.Decoder CellValue
 entityColumnDecoderFor columnDefinition =
     JD.string -- TODO
 
-columnDefinitions : Schema -> String -> (List ColumnDefinition)
+columnDefinitions : Schema -> String -> Maybe (List ColumnDefinition)
 columnDefinitions schema tableName =
-    Dict.get schema tableName
-    |> .value
-    |> columnDefinitions
+    case 
+        Dict.get tableName schema.tables
+    of 
+        Just value -> Just value.columns
+        Nothing -> Nothing
 
 {- Views -}
 
@@ -430,15 +432,3 @@ httpError httpE =
 
         Http.BadBody body ->
             "Bad body: " ++ body
-
-
-
-
-schemaDecoder : Xml.Decode.Decoder Schema
-schemaDecoder =
-    Xml.Decode.map Schema
-        (path [ "edmx:DataServices", "Schema", "EntityContainer", "EntitySet" ]
-            (Xml.Decode.list
-                (stringAttr "Name")
-            )
-        )

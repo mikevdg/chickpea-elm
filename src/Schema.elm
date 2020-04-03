@@ -1,4 +1,4 @@
-module Schema exposing (schemaDecoder)
+module Schema exposing (Schema, schemaDecoder)
 
 import Xml.Decode exposing (..)
 

@@ -11,6 +11,7 @@
             "elm/html": "1.0.0",
             "elm/http": "2.0.0",
             "elm/json": "1.1.2",
+            "jinjor/elm-xml-parser": "2.0.0",
             "mdgriffith/elm-ui": "1.1.5",
             "ymtszw/elm-xml-decode": "3.1.0"
         },
@@ -21,7 +22,6 @@
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
             "elm/virtual-dom": "1.0.2",
-            "jinjor/elm-xml-parser": "2.0.0",
             "rtfeldman/elm-hex": "1.0.0"
         }
     },
