@@ -5,6 +5,7 @@ import Html.Attributes exposing (placeholder, style)
 import Html.Events exposing (..)
 import Http
 import Json.Decode as JD
+import Json.Decode.Pipeline as JDp
 import Xml.Decode
 import Dict exposing (Dict)
 import Schema
@@ -67,7 +68,7 @@ type Loadable a
 
 
 type alias DataTableModel =
-    { entityName : String
+    { tableName : String
     , schema : Schema
     , query : Query
     , tableData : Loadable TableData
@@ -77,8 +78,8 @@ type alias DataTableModel =
 
 
 initDataTableModel : String -> Schema -> DataTableModel
-initDataTableModel entityName schema =
-    { entityName = entityName
+initDataTableModel tableName schema =
+    { tableName = tableName
     , schema = schema
     , query = initQuery
     , tableData = Loading
@@ -168,12 +169,15 @@ updateDataTable msg loading =
        Loading -> 
            Loading
        Loaded model -> 
+        case columnDefinitions model.schema model.tableName of
+         Nothing -> Failure ("No such table: "++model.tableName)
+         Just columns -> 
             case msg of
              GotHttpTableContents result ->
               case result of
                 Ok json ->
-                    Loaded { model | tableData = parseTableContents json }
-
+                    Loaded { model | 
+                        tableData = parseTableContents json columns }
                 Err error ->
                     Loaded { model | tableData = Failure (httpError error) }
        
@@ -222,11 +226,11 @@ parseSchemaXml xmlString =
 toTableSchema : Schema.Schema -> Schema
 toTableSchema = Debug.todo "toTableSchema"
 
-parseTableContents : String -> Loadable TableData
-parseTableContents json =
+parseTableContents : String -> (List ColumnDefinition) -> Loadable TableData
+parseTableContents json columns =
          let
            r =
-               JD.decodeString tableContentsDecoder json
+               JD.decodeString (tableContentsDecoder columns)  json
        in
        case r of
            Ok value ->
@@ -266,26 +270,24 @@ parseTableContents json =
 }
 
 -}
-tableContentsDecoder : Schema -> String -> JD.Decoder TableData
+tableContentsDecoder : (List ColumnDefinition) -> JD.Decoder TableData
+tableContentsDecoder columns =
+    JD.field "value" (
+        JD.map 
+            (\a -> {rows=a})
+            (JD.list rowDecoder))
 
-tableContentsDecoder schema tableName =
-    let ed = entityDecoder schema tableName
-    in 
-    JD.map 
-        (\a -> {rows=a})
-        (JD.field "value" <|
-            JD.list ed)
+rowDecoder : JD.Decoder Row
+rowDecoder =
+    JD.map Dict.values (JD.dict JD.string)
 
-entityDecoder : Schema -> String -> JD.Decoder (List CellValue)
-entityDecoder schema tableName =
-    let columns = columnDefinitions schema tableName
-    in entityDecoderImpl columns
-        
-entityDecoderImpl : (List ColumnDefinition) -> JD.Decoder (List CellValue)
-entityDecoderImpl columnDefs =
+{-
+entityDecoder : (List ColumnDefinition) -> JD.Decoder (List CellValue)
+entityDecoder columnDefs =
     case columnDefs of
         [] -> []
-        head::tail -> entityColumnDecoderFor head <| entityDecoderImpl tail
+        head::tail -> entityColumnDecoderFor head <| entityDecoder tail
+-}
 
 entityColumnDecoderFor : ColumnDefinition -> JD.Decoder CellValue
 entityColumnDecoderFor columnDefinition =
