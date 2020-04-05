@@ -327,7 +327,7 @@ columnDefinitions schema tableName =
 {- Views -}
 
 viewDataTable : Loadable DataTableModel -> Html Msg
-viewDataTable model =
+viewDataTable loadable =
     Html.div
         []
         [ filterDiv
@@ -337,7 +337,10 @@ viewDataTable model =
             , style "width" "300px"
             ]
             [ scrollDiv
-            , contentsDiv
+            , case loadable of 
+                Failure error -> Html.text error
+                Loading -> Html.text "loading..."
+                Loaded model -> contentsDiv model.tableData
             ]
         ]
 
@@ -365,9 +368,13 @@ scrollDiv =
         ]
 
 
-contentsDiv : Html Msg
-contentsDiv =
-    Html.div
+contentsDiv : Loadable TableData -> Html Msg
+contentsDiv loadable =
+    case loadable of
+     Failure error -> Html.text error
+     Loading -> Html.text "loading... "
+     Loaded tableContents -> 
+      Html.div
         [ style "overflow-x" "auto"
 
         --, style "overflow-y" ""
@@ -376,7 +383,7 @@ contentsDiv =
         , style "z-index" "1"
         , style "margin-right" "12px"
         ]
-        [ dataTableContents
+        [ dataTableContents tableContents
         ]
 
 
@@ -391,17 +398,13 @@ cellStyle =
     style "border" "1px solid gray"
 
 
-exampleData : Html msg
-exampleData =
+viewRow : Row -> Html msg
+viewRow row =
     tr []
-        [ td [ cellStyle ] [ Html.text "Cell A2" ]
-        , td [ cellStyle ] [ Html.text "Cell B1" ]
-        , td [ cellStyle ] [ Html.text "Cell B2" ]
-        ]
+        (List.map (\a -> td [ cellStyle ] [ Html.text a ] ) row)
 
-
-dataTableContents : Html Msg
-dataTableContents =
+dataTableContents : TableData -> Html Msg
+dataTableContents table =
     Html.table
         [ style "border" "1px solid grey"
         , style "border-collapse" "collapse"
@@ -427,15 +430,7 @@ dataTableContents =
                 ]
             ]
         , tbody []
-            [ exampleData
-            , exampleData
-            , exampleData
-            , exampleData
-            , exampleData
-            , exampleData
-            , exampleData
-            , exampleData
-            ]
+            (List.map viewRow table.rows)
         ]
 
 
