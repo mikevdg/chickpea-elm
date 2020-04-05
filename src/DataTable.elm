@@ -8,7 +8,7 @@ import Json.Decode as JD
 import Json.Decode.Pipeline as JDp
 import Xml.Decode
 import Dict exposing (Dict)
-import Schema
+--import Schema -- TODO
 
 ---- Progress markers ----
 
@@ -188,11 +188,30 @@ updateSchema msg =
         GotHttpSchema result ->
             case result of
                 Ok xml ->
-                    parseSchemaXml xml
+                    -- TODO parseSchemaXml xml
+                    Loaded todoSchema
 
                 Err error ->
                     Failure (httpError error) 
 
+todoSchemaMarker = Debug.todo "todoSchema"
+todoSchema : Schema
+todoSchema = {
+    tables=Dict.fromList [
+        ("Example Table 1",{name="Example Table 1", definition="", columns= [ 
+            { heading = "Field1", columnType = EdmString }
+            , { heading = "Field2", columnType = EdmString }
+            ]})
+        , ("Example Table 2",{name="Example Table 2", definition="", columns=[ 
+            { heading = "Field1", columnType = EdmString }
+            , { heading = "Field2", columnType = EdmString }
+            ]})
+        , ("Example Table 3",{name="Example Table 3", definition="", columns=[ 
+            { heading = "Field1", columnType = EdmString }
+            , { heading = "Field2", columnType = EdmString }
+            ]})
+        ]
+ }
 
 httpGetSchema : Cmd SchemaMessage
 httpGetSchema =
@@ -211,6 +230,7 @@ refreshTable tableName =
         , expect = Http.expectString GotHttpTableContents
         }
 
+{-
 parseSchemaXml : String -> Loadable Schema
 parseSchemaXml xmlString =
     let
@@ -225,6 +245,7 @@ parseSchemaXml xmlString =
 
 toTableSchema : Schema.Schema -> Schema
 toTableSchema = Debug.todo "toTableSchema"
+-}
 
 parseTableContents : String -> (List ColumnDefinition) -> Loadable TableData
 parseTableContents json columns =
@@ -279,7 +300,7 @@ tableContentsDecoder columns =
 
 rowDecoder : JD.Decoder Row
 rowDecoder =
-    JD.map Dict.values (JD.dict JD.string)
+    JD.map Dict.values (JD.dict JD.string) -- TODO: also support sub-columns.
 
 {-
 entityDecoder : (List ColumnDefinition) -> JD.Decoder (List CellValue)
@@ -291,15 +312,17 @@ entityDecoder columnDefs =
 
 entityColumnDecoderFor : ColumnDefinition -> JD.Decoder CellValue
 entityColumnDecoderFor columnDefinition =
-    JD.string -- TODO
+    JD.string -- TODO: support other column types.
 
 columnDefinitions : Schema -> String -> Maybe (List ColumnDefinition)
 columnDefinitions schema tableName =
     case 
         Dict.get tableName schema.tables
     of 
-        Just value -> Just value.columns
+        Just value -> Just value.columns 
         Nothing -> Nothing
+
+
 
 {- Views -}
 

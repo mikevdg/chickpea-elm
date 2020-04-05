@@ -8,6 +8,7 @@ import Html exposing (Html, ul, li, text, div, button)
 import Html.Events exposing (onClick)
 import Html.Attributes exposing (style)
 import DataTable as Dt
+import Dict
 
 init : ( Model, Cmd Msg )
 init =
@@ -155,23 +156,23 @@ viewEntities model =
         Dt.Loading ->
             text "Loading..."
 
-        Dt.Loaded data ->
+        Dt.Loaded schema ->
             div []
                 [ button [ onClick RefreshSchema, style "display" "block" ] [ text "Reload!" ]
-                , viewEntityList data.entities
+                , viewAvailableTableList (Dict.values schema.tables)
                 ]
 
 
-viewEntityList : List String -> Html Msg
-viewEntityList entityList =
+viewAvailableTableList : List Dt.Table -> Html Msg
+viewAvailableTableList tables =
     ul []
         (List.map
             (\it ->
                 li
-                    [ onClick (ChooseTable it)
+                    [ onClick (ChooseTable it.name)
                     , style "cursor" "pointer"
                     ]
-                    [ text it ]
+                    [ text it.name ]
             )
-            entityList
+            tables
         )
