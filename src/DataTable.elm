@@ -109,9 +109,8 @@ initQuery =
 
 
 {- I am the cell values of an on-page table. -}
+import logo from './logo.svg';
 
-
-type alias TableData =
     { rows : List Row }
 
 type alias Row = List CellValue
@@ -198,7 +197,7 @@ todoSchemaMarker = Debug.todo "todoSchema"
 todoSchema : Schema
 todoSchema = {
     tables=Dict.fromList [
-        ("Example Table 1",{name="Example Table 1", definition="", columns= [ 
+        ("People",{name="People", definition="", columns= [ 
             { heading = "Field1", columnType = EdmString }
             , { heading = "Field2", columnType = EdmString }
             ]})
@@ -432,7 +431,7 @@ dataTableContents table =
         , tbody []
             (List.map viewRow table.rows)
         ]
-
+ background-color:red;
 
 
 httpError : Http.Error -> String
